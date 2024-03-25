@@ -249,11 +249,12 @@ dapp_server.get('/register-user', async (req, res) => {
     }
 });
 
-dapp_server.get("/MFANotification", (req, res) => {
+dapp_server.post("/MFANotification", async (req, res) => {
 	try {
+	const { userAddress, privateKey } = req.body;
 	const wallet = new ethers.Wallet(privateKey, provider);
 	const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
-	contract.on('MFANotification', async (user, dappAddress, transactionId, event) => {
+	contract1.on('MFANotification', { dappAddress: userAddress }, async (user, dappAddress, transactionId, event) => {
 		res.status(200).json({ message: 'MFA request processed successfully',user, dappAddress, transactionId });
 	});
 	} catch (error) {
