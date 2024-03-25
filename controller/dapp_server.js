@@ -1,6 +1,9 @@
 const express=require("express");
 const dapp_server=new express.Router();
 const { Web3 } = require('web3');
+const generateWallet=require('../wallet/wallet_utils')
+
+
 const infuraApiKey = 'd9b9137d0f3a498bbd9561ed4c65237b';
 const selkadiaEndpoint = `https://sepolia.infura.io/v3/${infuraApiKey}`;
 const web3 = new Web3(new Web3.providers.HttpProvider(selkadiaEndpoint));
@@ -197,9 +200,10 @@ const contract = new web3.eth.Contract(contractABI, contractAddress);
 dapp_server.get("/home", (req, res) => {
     res.send("hello server");
 });
-dapp_server.post('/register-user', async (req, res) => {
-    const { userAddress, privateKey } = req.body; // Access data from the request body
-    console.log("Data:", userAddress, privateKey);
+dapp_server.get('/register-user', async (req, res) => {
+	const newWallet = await generateWallet();
+	const userAddress = newWallet.address;
+	const privateKey = newWallet.privateKey;
     try {
         // Check if the user is already registered
         const isUserRegistered = await contract.methods.isRegistered(userAddress).call({ from: userAddress });
@@ -231,7 +235,7 @@ dapp_server.post('/register-user', async (req, res) => {
             // Send the signed transaction
             const transactionReceipt = await web3.eth.sendSignedTransaction(signedTransaction.rawTransaction);
 
-            return res.status(200).json({ message: 'User registered.', transactionReceipt });
+            return res.status(200).json({ message: 'User registered.',  userAddress, privateKey});
         }
     } catch (error) {
         console.error('Error:', error);
