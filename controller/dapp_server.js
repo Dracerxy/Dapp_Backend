@@ -2,6 +2,9 @@ const express=require("express");
 const dapp_server=new express.Router();
 const { Web3 } = require('web3');
 const generateWallet=require('../wallet/wallet_utils')
+const { ethers } = require('ethers');
+const { EventEmitter } = require('events');
+EventEmitter.defaultMaxListeners = 15;
 
 
 const infuraApiKey = 'd9b9137d0f3a498bbd9561ed4c65237b';
