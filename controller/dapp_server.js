@@ -257,26 +257,18 @@ dapp_server.post("/MFANotification", async (req, res) => {
     try {
         const { userAddress, privateKey } = req.body;
         const wallet = new ethers.Wallet(privateKey, provider);
-        const contract = new ethers.Contract(contractAddress, contractABI, wallet);
-
-        // Define the event filter for MFANotification events with the specific DApp address
-        const eventFilter = {
-            dappAddress: userAddress
-        };
-
-        // Listen for MFANotification events with the specified filter
-        contract.on('MFANotification', async (user, dappAddress, transactionId, event) => {
-            // Only process events with the specified DApp address
-            // if (dappAddress === userAddress) {
+        const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
+        contract1.on('MFANotification', async (user, dappAddress, transactionId, event) => {
+            if (dappAddress === userAddress) {
                 res.status(200).json({
                     message: 'MFA request processed successfully',
                     user,
                     dappAddress,
                     transactionId
                 });
-            // }else{
-			// 	res.status(500).json({message:"not yours"});
-			// }
+            }else{
+				res.status(500).json({message:"not yours"})
+			}
         });
 
         // Handle disconnection
