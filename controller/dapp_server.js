@@ -201,15 +201,17 @@ dapp_server.get("/home", (req, res) => {
     res.send("hello server");
 });
 dapp_server.get('/register-user', async (req, res) => {
-	const newWallet = await generateWallet();
-	const userAddress = newWallet.address;
-	const privateKey = newWallet.privateKey;
+	// const newWallet = await generateWallet();
+	// const userAddress = newWallet.address;
+	// const privateKey = newWallet.privateKey;
+	const userAddress = '0x5145a8426EB329D6E9bC7bAd56FC13DA22d49C97';
+	const privateKey ='0xc4c11295504caa07a3abf05e2b089ef668bae8db3cb4cbbd097f052ff404be650xc4c11295504caa07a3abf05e2b089ef668bae8db3cb4cbbd097f052ff404be65';
     try {
         // Check if the user is already registered
         const isUserRegistered = await contract.methods.isRegistered(userAddress).call({ from: userAddress });
 
         if (isUserRegistered) {
-            return res.status(200).json({ message: 'User is already registered.' });
+            return res.status(200).json({ message: 'User is already registered.', userAddress, privateKey });
         } else {
             // User is not registered, proceed with registration
             const gas = await contract.methods.registerUserWithWallet().estimateGas({ from: userAddress });
