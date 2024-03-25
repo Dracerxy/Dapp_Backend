@@ -5,7 +5,8 @@ const generateWallet=require('../wallet/wallet_utils')
 const { ethers } = require('ethers');
 const { EventEmitter } = require('events');
 EventEmitter.defaultMaxListeners = 15;
-
+let latestNotification = null;
+let notificationListenerStarted = false;
 
 const infuraApiKey = 'd9b9137d0f3a498bbd9561ed4c65237b';
 const selkadiaEndpoint = `https://sepolia.infura.io/v3/${infuraApiKey}`;
@@ -204,6 +205,29 @@ const contractABI = [
 ];
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
+function startNotificationListener(userAddress, privateKey) {
+    // Check if the listener is already started
+    if (!notificationListenerStarted) {
+        const wallet = new ethers.Wallet(privateKey, provider);
+        const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
+
+        // Event listener
+        contract1.on('MFANotification', async (user, dappAddress, transactionId, event) => {
+            if (dappAddress === userAddress) {
+                // Store latest notification data
+                latestNotification = {
+                    user,
+                    dappAddress,
+                    transactionId
+                };
+            }
+        });
+
+        notificationListenerStarted = true;
+    }
+}
+
+
 dapp_server.get("/home", (req, res) => {
     res.send("hello server");
 });
@@ -256,28 +280,23 @@ dapp_server.get('/register-user', async (req, res) => {
 dapp_server.post("/MFANotification", async (req, res) => {
     try {
         const { userAddress, privateKey } = req.body;
-        const wallet = new ethers.Wallet(privateKey, provider);
-        const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
+        startNotificationListener(userAddress, privateKey);
 
-        // Event listener
-       	 contract1.on('MFANotification', async (user, dappAddress, transactionId, event) => {
-            if (dappAddress === userAddress) {
-                // Store data in variables
-                eventData = {
-                    user,
-                    dappAddress,
-                    transactionId
-                };
-				res.status(200).json({
-                    message: 'MFA request processed successfully',
-                    ...eventData
-                });
-            }
-            // // Handle disconnection
-            // contract.removeAllListeners('MFANotification');
-        });
+        // Check if there's a latest notification
+        if (latestNotification) {
+            // Send the latest notification as response
+            res.status(200).json({
+                message: 'MFA request processed successfully',
+                ...latestNotification
+            });
+            // Reset latest notification
+            latestNotification = null;
+        } else {
+            // No notification available, send empty response
+            res.status(204).end();
+        }
     } catch (error) {
-        console.error('Error listening for MFANotification event:', error);
+        console.error('Error handling MFANotification request:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
