@@ -7,6 +7,10 @@ const generateWallet=require('../wallet/wallet_utils')
 const infuraApiKey = 'd9b9137d0f3a498bbd9561ed4c65237b';
 const selkadiaEndpoint = `https://sepolia.infura.io/v3/${infuraApiKey}`;
 const web3 = new Web3(new Web3.providers.HttpProvider(selkadiaEndpoint));
+
+const provider = new ethers.providers.InfuraProvider('sepolia', infuraApiKey);
+
+
 const contractAddress = '0xf5531B5106b693158953f36AF85f5B9051Ad0F5f';
 const contractABI = [
 	{
@@ -245,5 +249,17 @@ dapp_server.get('/register-user', async (req, res) => {
     }
 });
 
+dapp_server.get("/MFANotification", (req, res) => {
+	try {
+	const wallet = new ethers.Wallet(privateKey, provider);
+	const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
+	contract.on('MFANotification', async (user, dappAddress, transactionId, event) => {
+		res.status(200).json({ message: 'MFA request processed successfully',user, dappAddress, transactionId });
+	});
+	} catch (error) {
+		console.error('Error listening for MFANotification event:', error);
+		res.status(500).json({ error: 'Internal server error' });
+	}
+	});
 
 module.exports = dapp_server;
