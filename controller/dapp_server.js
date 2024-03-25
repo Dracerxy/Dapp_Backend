@@ -258,28 +258,43 @@ dapp_server.post("/MFANotification", async (req, res) => {
         const { userAddress, privateKey } = req.body;
         const wallet = new ethers.Wallet(privateKey, provider);
         const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
-        contract1.on('MFANotification', async (user, dappAddress, transactionId, event) => {
+
+        // Define variables to store data
+        let eventData = null;
+
+        // Event listener
+        contract1.once('MFANotification', async (user, dappAddress, transactionId, event) => {
             if (dappAddress === userAddress) {
-                res.status(200).json({
-                    message: 'MFA request processed successfully',
+                // Store data in variables
+                eventData = {
                     user,
                     dappAddress,
                     transactionId
-                });
-            }else{
-				res.status(500).json({message:"not yours"})
-			}
+                };
+            }
+            // Handle disconnection
+            contract.removeAllListeners('MFANotification');
         });
 
-        // Handle disconnection
-        req.on('close', () => {
-            contract.removeAllListeners('MFANotification');
+        // Wait for event listener to finish processing
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Check if eventData is null (event didn't match userAddress)
+        if (eventData === null) {
+            return res.status(500).json({ message: "not yours" });
+        }
+
+        // Send response with eventData
+        res.status(200).json({
+            message: 'MFA request processed successfully',
+            ...eventData
         });
     } catch (error) {
         console.error('Error listening for MFANotification event:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
 
 dapp_server.post("/MFAVerification",async(req,res)=>{
 	try{
