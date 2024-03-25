@@ -265,16 +265,18 @@ dapp_server.post("/MFANotification", async (req, res) => {
         };
 
         // Listen for MFANotification events with the specified filter
-        contract.on('MFANotification', eventFilter, async (user, dappAddress, transactionId, event) => {
+        contract.on('MFANotification', async (user, dappAddress, transactionId, event) => {
             // Only process events with the specified DApp address
-            if (dappAddress === userAddress) {
+            // if (dappAddress === userAddress) {
                 res.status(200).json({
                     message: 'MFA request processed successfully',
                     user,
                     dappAddress,
                     transactionId
                 });
-            }
+            // }else{
+			// 	res.status(500).json({message:"not yours"});
+			// }
         });
 
         // Handle disconnection
