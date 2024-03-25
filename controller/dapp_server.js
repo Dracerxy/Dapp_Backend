@@ -252,18 +252,40 @@ dapp_server.get('/register-user', async (req, res) => {
     }
 });
 
-dapp_server.post("/MFANotification",(req, res) => {
-	try {
-	const { userAddress, privateKey } = req.body;
-	const wallet = new ethers.Wallet(privateKey, provider);
-	const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
-	contract1.on('MFANotification', { dappAddress: userAddress }, async (user, dappAddress, transactionId, event) => {
-		res.status(200).json({ message: 'MFA request processed successfully',user, dappAddress, transactionId });
-	});
-	} catch (error) {
-		console.error('Error listening for MFANotification event:', error);
-		res.status(500).json({ error: 'Internal server error' });
-	}
-	});
+
+dapp_server.post("/MFANotification", async (req, res) => {
+    try {
+        const { userAddress, privateKey } = req.body;
+        const wallet = new ethers.Wallet(privateKey, provider);
+        const contract = new ethers.Contract(contractAddress, contractABI, wallet);
+
+        // Define the event filter for MFANotification events with the specific DApp address
+        const eventFilter = {
+            dappAddress: userAddress
+        };
+
+        // Listen for MFANotification events with the specified filter
+        contract.on('MFANotification', eventFilter, async (user, dappAddress, transactionId, event) => {
+            // Only process events with the specified DApp address
+            if (dappAddress === userAddress) {
+                res.status(200).json({
+                    message: 'MFA request processed successfully',
+                    user,
+                    dappAddress,
+                    transactionId
+                });
+            }
+        });
+
+        // Handle disconnection
+        req.on('close', () => {
+            contract.removeAllListeners('MFANotification');
+        });
+    } catch (error) {
+        console.error('Error listening for MFANotification event:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 
 module.exports = dapp_server;
