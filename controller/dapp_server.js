@@ -198,7 +198,6 @@ dapp_server.get("/home", (req, res) => {
     res.send("hello server");
 });
 dapp_server.post('/register-user', async (req, res) => {
-	consol.log("iam calling.........")
     const { userAddress, privateKey } = req.body; // Access data from the request body
     console.log("Data:", userAddress, privateKey);
     try {
