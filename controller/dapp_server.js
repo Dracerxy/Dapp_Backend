@@ -281,5 +281,21 @@ dapp_server.post("/MFANotification", async (req, res) => {
     }
 });
 
+dapp_server.post("/MFAVerification",async(req,res)=>{
+	try{
+		const { userAddress, privateKey , transactionId  } = req.body;
+		const wallet = new ethers.Wallet(privateKey, provider);
+        const contract2 = new ethers.Contract(contractAddress, contractABI, wallet);
+		const signature = await wallet.signMessage(ethers.utils.arrayify(transactionId));
+		const gasLimit = await contract2.estimateGas.verifyMFA(transactionId, signature, { from: userAddress });
+        const gasPrice = await provider.getGasPrice();
+		const transactionResponse = await contract2.verifyMFA(transactionId, signature, { gasLimit, gasPrice });
+		await transactionResponse.wait();
+		res.status(200).json({message:"MFA verification transaction confirmed in block:" + transactionResponse.blockNumber});
+	}catch(error){
+		console.error("Error verifying the MFA request!!");
+		res.status(500).json({error:'Internal Server Error'});
+	}
+});
 
 module.exports = dapp_server;
