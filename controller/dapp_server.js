@@ -212,7 +212,7 @@ dapp_server.get('/register-user', async (req, res) => {
 	// const userAddress = newWallet.address;
 	// const privateKey = newWallet.privateKey;
 	const userAddress = '0x5145a8426EB329D6E9bC7bAd56FC13DA22d49C97';
-	const privateKey ='0xc4c11295504caa07a3abf05e2b089ef668bae8db3cb4cbbd097f052ff404be650xc4c11295504caa07a3abf05e2b089ef668bae8db3cb4cbbd097f052ff404be65';
+	const privateKey ='0xc4c11295504caa07a3abf05e2b089ef668bae8db3cb4cbbd097f052ff404be65';
     try {
         // Check if the user is already registered
         const isUserRegistered = await contract.methods.isRegistered(userAddress).call({ from: userAddress });
@@ -255,7 +255,6 @@ dapp_server.get('/register-user', async (req, res) => {
 dapp_server.post("/MFANotification", async (req, res) => {
 	try {
 	const { userAddress, privateKey } = req.body;
-	console.log("userAddress",userAddress,"key",privateKey);
 	const wallet = new ethers.Wallet(privateKey, provider);
 	const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
 	contract1.on('MFANotification', { dappAddress: userAddress }, async (user, dappAddress, transactionId, event) => {
