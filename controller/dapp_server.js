@@ -255,6 +255,7 @@ dapp_server.get('/register-user', async (req, res) => {
 dapp_server.post("/MFANotification", async (req, res) => {
 	try {
 	const { userAddress, privateKey } = req.body;
+	console.log("userAddress",userAddress,"key",privateKey);
 	const wallet = new ethers.Wallet(privateKey, provider);
 	const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
 	contract1.on('MFANotification', { dappAddress: userAddress }, async (user, dappAddress, transactionId, event) => {
