@@ -12,9 +12,10 @@ const selkadiaEndpoint = `https://sepolia.infura.io/v3/${infuraApiKey}`;
 const web3 = new Web3(new Web3.providers.HttpProvider(selkadiaEndpoint));
 
 const provider = new ethers.providers.InfuraProvider('sepolia', infuraApiKey);
+const relayerprivateKey = '0xc52796f8cc4819dc9a0ea264985c8acf6d73f1ee1a2fb2db2656dba4034af983'; 
+const relayerAddress = '0x3A83b78581c682813fd206af7fFD8c90d7ae81bE';
 
-
-const contractAddress = '0xf5531B5106b693158953f36AF85f5B9051Ad0F5f';
+const contractAddress = '0x9CB1993B6D84BADF715fd0368c5e6194784eaF8A';
 const contractABI = [
 	{
 		"inputs": [],
@@ -101,7 +102,13 @@ const contractABI = [
 		"type": "event"
 	},
 	{
-		"inputs": [],
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
 		"name": "registerUserWithWallet",
 		"outputs": [],
 		"stateMutability": "nonpayable",
@@ -128,6 +135,11 @@ const contractABI = [
 	},
 	{
 		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
 			{
 				"internalType": "bytes32",
 				"name": "transactionId",
@@ -183,6 +195,19 @@ const contractABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "relayer",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -208,11 +233,9 @@ dapp_server.get("/home", (req, res) => {
     res.send("hello server");
 });
 dapp_server.get('/register-user', async (req, res) => {
-	// const newWallet = await generateWallet();
-	// const userAddress = newWallet.address;
-	// const privateKey = newWallet.privateKey;
-	const userAddress = '0x5145a8426EB329D6E9bC7bAd56FC13DA22d49C97';
-	const privateKey ='0xc4c11295504caa07a3abf05e2b089ef668bae8db3cb4cbbd097f052ff404be65';
+	const newWallet = await generateWallet();
+	const userAddress = newWallet.address;
+	const privateKey = newWallet.privateKey;
     try {
         // Check if the user is already registered
         const isUserRegistered = await contract.methods.isRegistered(userAddress).call({ from: userAddress });
@@ -220,30 +243,24 @@ dapp_server.get('/register-user', async (req, res) => {
         if (isUserRegistered) {
             return res.status(200).json({ message: 'User is already registered.', userAddress, privateKey });
         } else {
-            // User is not registered, proceed with registration
-            const gas = await contract.methods.registerUserWithWallet().estimateGas({ from: userAddress });
-            const gasPrice = await web3.eth.getGasPrice();
-
-            // Build the transaction
-            const transactionObject = contract.methods.registerUserWithWallet();
+			// Build the transaction
+			const txNonce = await web3.eth.getTransactionCount(relayerAddress);
+			const transactionObject = contract.methods.registerUserWithWallet(userAddress);
             const transactionData = transactionObject.encodeABI();
-            const nonce = await web3.eth.getTransactionCount(userAddress);
-
+			const gas =await contract.methods.registerUserWithWallet(userAddress).estimateGas({ from: relayerAddress });
+            const gasPrice = await web3.eth.getGasPrice();
             const rawTransaction = {
-                from: userAddress,
+                from: relayerAddress,
                 to: contractAddress,
                 gas,
                 gasPrice,
                 data: transactionData,
-                nonce,
+                nonce:txNonce,
             };
-
             // Sign the transaction
-            const signedTransaction = await web3.eth.accounts.signTransaction(rawTransaction, privateKey);
-
+            const signedTransaction = await web3.eth.accounts.signTransaction(rawTransaction,relayerprivateKey);
             // Send the signed transaction
             const transactionReceipt = await web3.eth.sendSignedTransaction(signedTransaction.rawTransaction);
-
             return res.status(200).json({ message: 'User registered.',  userAddress, privateKey});
         }
     } catch (error) {
@@ -255,8 +272,8 @@ dapp_server.get('/register-user', async (req, res) => {
 
 dapp_server.post("/MFANotification", async (req, res) => {
     try {
-        const { userAddress, privateKey } = req.body;
-        const wallet = new ethers.Wallet(privateKey, provider);
+        const { userAddress} = req.body;
+        const wallet = new ethers.Wallet(relayerprivateKey, provider);
         const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
 
         // Event listener
@@ -285,17 +302,18 @@ dapp_server.post("/MFANotification", async (req, res) => {
 
 dapp_server.post("/MFAVerification",async(req,res)=>{
 	try{
-		const { userAddress, privateKey , transactionId  } = req.body;
-		const wallet = new ethers.Wallet(privateKey, provider);
+		const { userAddress ,privateKey, transactionId  } = req.body;
+		const wallet = new ethers.Wallet(relayerprivateKey, provider);
+		const wallet_user = new ethers.Wallet(privateKey, provider);
         const contract2 = new ethers.Contract(contractAddress, contractABI, wallet);
-		const signature = await wallet.signMessage(ethers.utils.arrayify(transactionId));
-		const gasLimit = await contract2.estimateGas.verifyMFA(transactionId, signature, { from: userAddress });
+		const signature = await wallet_user.signMessage(ethers.utils.arrayify(transactionId));
+		const gasLimit = await contract2.estimateGas.verifyMFA(userAddress,transactionId, signature, { from: relayerAddress});
         const gasPrice = await provider.getGasPrice();
-		const transactionResponse = await contract2.verifyMFA(transactionId, signature, { gasLimit, gasPrice });
+		const transactionResponse = await contract2.verifyMFA(userAddress,transactionId, signature, { gasLimit, gasPrice });
 		await transactionResponse.wait();
 		res.status(200).json({message:"MFA verification transaction confirmed in block:" + transactionResponse.blockNumber});
 	}catch(error){
-		console.error("Error verifying the MFA request!!");
+		console.error("Error verifying the MFA request!!"+error);
 		res.status(500).json({error:'Internal Server Error'});
 	}
 });
