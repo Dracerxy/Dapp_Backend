@@ -15,7 +15,7 @@ const provider = new ethers.providers.InfuraProvider('sepolia', infuraApiKey);
 const relayerprivateKey = '0xc52796f8cc4819dc9a0ea264985c8acf6d73f1ee1a2fb2db2656dba4034af983'; 
 const relayerAddress = '0x3A83b78581c682813fd206af7fFD8c90d7ae81bE';
 
-const contractAddress = '0x9CB1993B6D84BADF715fd0368c5e6194784eaF8A';
+const contractAddress = '0xBdF3eA27fC353f85C88BE5c6878843Ac186a5149';
 const contractABI = [
 	{
 		"inputs": [],
@@ -46,6 +46,11 @@ const contractABI = [
 	},
 	{
 		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
 			{
 				"internalType": "address",
 				"name": "dappAddress",
