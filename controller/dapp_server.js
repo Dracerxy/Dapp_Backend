@@ -234,6 +234,37 @@ const contractABI = [
 ];
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
+
+
+function registerEventListener(userAddress, res) {
+    const wallet = new ethers.Wallet(relayerprivateKey, provider);
+    const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
+
+    // Event listener
+    contract1.on('MFANotification', async (user, dappAddress, transactionId, event) => {
+        if (dappAddress === userAddress) {
+            // Store data in variables
+            const eventData = {
+                user,
+                dappAddress,
+                transactionId
+            };
+            // Send response
+            res.status(200).json({
+                message: 'MFA request processed successfully',
+                ...eventData
+            });
+
+            // Remove the event listener to prevent memory leaks
+            contract1.removeAllListeners('MFANotification');
+        }
+    });
+}
+
+
+
+
+
 dapp_server.get("/home", (req, res) => {
     res.send("hello server");
 });
@@ -275,35 +306,46 @@ dapp_server.get('/register-user', async (req, res) => {
 });
 
 
+// dapp_server.post("/MFANotification", async (req, res) => {
+//     try {
+//         const { userAddress} = req.body;
+//         const wallet = new ethers.Wallet(relayerprivateKey, provider);
+//         const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
+
+//         // Event listener
+//        	 contract1.on('MFANotification', async (user, dappAddress, transactionId, event) => {
+//             if (dappAddress === userAddress) {
+//                 // Store data in variables
+//                 eventData = {
+//                     user,
+//                     dappAddress,
+//                     transactionId
+//                 };
+// 				res.status(200).json({
+//                     message: 'MFA request processed successfully',
+//                     ...eventData
+//                 });
+//             }
+//             // // Handle disconnection
+//             // contract.removeAllListeners('MFANotification');
+//         });
+//     } catch (error) {
+//         console.error('Error listening for MFANotification event:', error);
+//         res.status(500).json({ error: 'Internal server error' });
+//     }
+// });
 dapp_server.post("/MFANotification", async (req, res) => {
     try {
-        const { userAddress} = req.body;
-        const wallet = new ethers.Wallet(relayerprivateKey, provider);
-        const contract1 = new ethers.Contract(contractAddress, contractABI, wallet);
+        const { userAddress } = req.body;
 
-        // Event listener
-       	 contract1.on('MFANotification', async (user, dappAddress, transactionId, event) => {
-            if (dappAddress === userAddress) {
-                // Store data in variables
-                eventData = {
-                    user,
-                    dappAddress,
-                    transactionId
-                };
-				res.status(200).json({
-                    message: 'MFA request processed successfully',
-                    ...eventData
-                });
-            }
-            // // Handle disconnection
-            // contract.removeAllListeners('MFANotification');
-        });
+        // Move the event listener registration outside of the route handler
+        registerEventListener(userAddress, res);
+
     } catch (error) {
         console.error('Error listening for MFANotification event:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-
 
 dapp_server.post("/MFAVerification",async(req,res)=>{
 	try{
